@@ -1,0 +1,16 @@
+{
+  "name": "web-galaxy",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  },
+  "dependencies": {
+    "three.quarks": "^0.17.1"
+  }
+}
