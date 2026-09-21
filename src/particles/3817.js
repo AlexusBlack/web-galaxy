@@ -34,7 +34,7 @@ export function Particles_3817() {
     ],
 
     // Initial particle properties
-    startLife: new QUARKS.ConstantValue(30),
+    startLife: new QUARKS.IntervalValue(30 - 5, 30 + 5),
     // prewarm: true,
     startSpeed: new QUARKS.ConstantValue(0),
     startSize: new QUARKS.IntervalValue(300*(1 - 0.2), 300*(1 + 0.2)),
