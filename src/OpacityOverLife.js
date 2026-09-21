@@ -11,8 +11,10 @@
 // particle.color is only copied from startColor at spawn and is never reset, so a
 // per-frame `*=` would compound and collapse alpha to zero within a second.
 //
-// Place this LAST in the behaviors array: ColorOverLife, if you ever add one, also
-// writes .w and would clobber this. Behaviors run in array order.
+// Place this last among the alpha writers: ColorOverLife, if you ever add one, also
+// writes .w and would clobber this. Behaviors run in array order. Effect appends its
+// LodScale after this one, which is intended -- LodScale multiplies the alpha this
+// behavior just wrote.
 //
 // Note on additive blending: these systems use THREE.AdditiveBlending
 // (blendSrc=SrcAlpha, blendDst=One), so the contribution is srcRGB * srcAlpha + dst.
