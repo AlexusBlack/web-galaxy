@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import * as QUARKS from 'three.quarks';
 import { Effect_4228 } from './effects/4228.js';
+import { Effect_4229 } from './effects/4229.js';
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
@@ -22,7 +23,8 @@ const batchedRenderer = new QUARKS.BatchedRenderer();
 scene.add(batchedRenderer);
 
 // One effect owns all four particle systems and scales them by camera distance.
-const effect = Effect_4228().addTo(scene, batchedRenderer);
+// const effect = Effect_4228().addTo(scene, batchedRenderer);
+const effect = Effect_4229().addTo(scene, batchedRenderer);
 
 controls.update();
 function animate() {
@@ -30,7 +32,7 @@ function animate() {
 
   const lod = effect.lod;
   effect.update(camera); // recompute the LOD band from the camera
-  if (effect.lod !== lod) console.log(`effect-4228 LOD ${lod} -> ${effect.lod}`);
+  if (effect.lod !== lod) console.log(`effect-4229 LOD ${lod} -> ${effect.lod}`);
 
   batchedRenderer.update(0.016); // Update the batched renderer with a fixed delta time (16ms for ~60fps)
   controls.update();
