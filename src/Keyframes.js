@@ -7,13 +7,31 @@
 //   new Keyframes([[0, 0], [0.2, 1], [1, 0]])  -> explicit [t, value] pairs
 //   new Keyframes([0, 1, 1, 0], { mode: 'linear' })
 //
+// Optional per-particle variability:
+//
+//   new Keyframes([0, 0.25, 0.3, 0.25, 0], { vary: 0.25 })
+//   new Keyframes([0, 0.25, 0.3, 0.25, 0], 0.25)   // shorthand for the same
+//
+// `vary` jitters EVERY keyframe independently, once per particle at spawn, by a
+// RELATIVE amount: v * (1 + random(-vary, +vary)). So particles differ in curve
+// *shape*, not just in overall scale, and a keyframe of exactly 0 stays exactly 0 --
+// fades in and out stay clean whatever `vary` is. Each particle keeps its own curve
+// for its whole life (state lives in the particle's GeneratorMemory).
+//
 // Implements the stock three.quarks FunctionValueGenerator interface, so it also works
 // with SizeOverLife / RotationOverLife / SpeedOverLife / OrbitOverLife.
 // It does NOT work with FrameOverLife, which only accepts a PiecewiseBezier.
 export class Keyframes {
-  constructor(points, { mode = 'monotone' } = {}) {
+  constructor(points, options = {}) {
     if (!Array.isArray(points) || points.length === 0) {
       throw new Error('Keyframes: points must be a non-empty array');
+    }
+
+    const { mode = 'monotone', vary = 0 } =
+      typeof options === 'number' ? { vary: options } : options;
+
+    if (!Number.isFinite(vary) || vary < 0) {
+      throw new Error('Keyframes: vary must be a finite number >= 0');
     }
 
     let ts, vs;
@@ -43,19 +61,33 @@ export class Keyframes {
 
     this.type = 'function';
     this.mode = mode;
+    this.vary = vary;
     this.ts = ts;
     this.vs = vs;
     this.n = ts.length;
+
+    // GeneratorMemory slot index, claimed in startGen. -1 = not claimed yet.
+    // Same convention as the library's IntervalValue.
+    this.indexCount = -1;
 
     // uniform spacing lets genValue index in O(1) instead of binary searching
     const step = this.n > 1 ? 1 / (this.n - 1) : 0;
     this.uniform = this.n < 2 || ts.every((t, i) => Math.abs(t - i * step) < 1e-9);
 
-    if (this.n > 2 && mode === 'monotone') this._computeTangents();
+    this.m = this._hermite() ? this._tangentsFor(vs) : null;
   }
 
-  _computeTangents() {
-    const { ts, vs, n } = this;
+  // Hermite tangents are only meaningful for 3+ keys in monotone mode; the other
+  // cases evaluate linearly.
+  _hermite() {
+    return this.n > 2 && this.mode === 'monotone';
+  }
+
+  // Fritsch-Carlson monotone tangents for `vs` over this curve's `ts`. Pure: takes
+  // a values array and returns a tangents array, so the shared base curve and each
+  // particle's jittered curve share one implementation.
+  _tangentsFor(vs) {
+    const { ts, n } = this;
     const d = new Array(n - 1); // secant slopes
     for (let i = 0; i < n - 1; i++) {
       const dt = ts[i + 1] - ts[i];
@@ -92,13 +124,34 @@ export class Keyframes {
       }
     }
 
-    this.m = m;
+    return m;
   }
 
-  startGen(_memory) {}
+  // Roll this particle's own curve once at spawn and park it in its memory, the way
+  // IntervalValue parks its lerp factor. Values AND tangents are stored: the
+  // monotonicity clamp is non-linear, so jittered keys need their own tangents and
+  // they cannot be derived from the shared ones. Doing it here keeps genValue O(1).
+  //
+  // Two small arrays are allocated per spawn. Irrelevant for burst emission; if a
+  // system ever spawns thousands of particles per second, pool them on the instance.
+  startGen(memory) {
+    if (!this.vary) return; // stateless fast path: claim no slot, allocate nothing
+    const vs = this.vs.map((v) => v * (1 + (Math.random() * 2 - 1) * this.vary));
+    this.indexCount = memory.length;
+    memory.push({ vs, m: this._hermite() ? this._tangentsFor(vs) : null });
+  }
 
-  genValue(_memory, t) {
-    const { ts, vs, n } = this;
+  genValue(memory, t) {
+    let { vs, m } = this;
+    if (this.vary) {
+      if (this.indexCount === -1 && memory) this.startGen(memory);
+      const own = memory && memory[this.indexCount];
+      // No memory at all (e.g. sampling the curve directly in a test) falls back to
+      // the shared, unjittered curve rather than throwing.
+      if (own) ({ vs, m } = own);
+    }
+
+    const { ts, n } = this;
     if (n === 1) return vs[0];
     if (!(t > ts[0])) return vs[0]; // also catches NaN
     if (t >= ts[n - 1]) return vs[n - 1];
@@ -109,15 +162,15 @@ export class Keyframes {
     const h = ts[i + 1] - t0;
     const s = (t - t0) / h;
 
-    if (this.mode === 'linear' || n < 3) return vs[i] + (vs[i + 1] - vs[i]) * s;
+    if (!m) return vs[i] + (vs[i + 1] - vs[i]) * s;
 
     const s2 = s * s;
     const s3 = s2 * s;
     return (
       (2 * s3 - 3 * s2 + 1) * vs[i] +
-      (s3 - 2 * s2 + s) * h * this.m[i] +
+      (s3 - 2 * s2 + s) * h * m[i] +
       (-2 * s3 + 3 * s2) * vs[i + 1] +
-      (s3 - s2) * h * this.m[i + 1]
+      (s3 - s2) * h * m[i + 1]
     );
   }
 
@@ -139,7 +192,7 @@ export class Keyframes {
   clone() {
     return new Keyframes(
       this.ts.map((t, i) => [t, this.vs[i]]),
-      { mode: this.mode }
+      { mode: this.mode, vary: this.vary }
     );
   }
 }

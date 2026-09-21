@@ -58,7 +58,12 @@ export function Particles_3816() {
     // Behaviors controlling particle evolution over time
     behaviors: [
       new QUARKS.FrameOverLife(new QUARKS.PiecewiseBezier([[new QUARKS.Bezier(0, 1, 2, 3), 0]])), // tile index 0 from the 4x4 grid
-      new OpacityOverLife(new Keyframes([0, 0.25, 0.25, 0.3, 0.25, 0.2, 0.25, 0.15, 0.25, 0.2, 0.25, 0])),
+      new OpacityOverLife(
+        // vary: 0.25 gives every particle its own +/-25%-jittered copy of this curve,
+        // so they stop fading in lockstep. Zero keyframes stay exactly zero, so the
+        // fade in and fade out are still clean.
+        new Keyframes([0, 0.25, 0.25, 0.3, 0.25, 0.2, 0.25, 0.15, 0.25, 0.2, 0.25, 0], { vary: 0.25 })
+      ),
     ],
   });
 
