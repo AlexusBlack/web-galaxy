@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import * as QUARKS from 'three.quarks';
+import { Effect_4227 } from './effects/4227.js';
 import { Effect_4228 } from './effects/4228.js';
 import { Effect_4229 } from './effects/4229.js';
 
@@ -23,8 +24,9 @@ const batchedRenderer = new QUARKS.BatchedRenderer();
 scene.add(batchedRenderer);
 
 // One effect owns all four particle systems and scales them by camera distance.
+const effect = Effect_4227().addTo(scene, batchedRenderer);
 // const effect = Effect_4228().addTo(scene, batchedRenderer);
-const effect = Effect_4229().addTo(scene, batchedRenderer);
+// const effect = Effect_4229().addTo(scene, batchedRenderer);
 
 controls.update();
 function animate() {
