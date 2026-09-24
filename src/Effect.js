@@ -259,9 +259,12 @@ export class Effect {
   }
 }
 
-// The size-ish fields of each emitter shape, so emitterScale can drive any of them.
-// Matches the shapes in quarks.core/src/shape/ plus our own UniformSphereEmitter, which
-// reports type 'sphere'.
+// Emitter sizing has two paths. Our own shapes (src/emitters/) describe their own size
+// through sizeSnapshot()/applySizeScale(), because a size is not always a set of numeric
+// fields -- an ellipsoid's is a Vector3, which the table below cannot express. Stock
+// three.quarks shapes have no such hook, so for those we scale named fields.
+//
+// The size-ish fields of each stock emitter shape, so emitterScale can drive any of them.
 const SHAPE_SIZE_FIELDS = {
   sphere: ['radius'],
   hemisphere: ['radius'],
@@ -282,12 +285,17 @@ function sizeFieldsOf(shape) {
   );
 }
 
+// The snapshot is opaque to Effect: whatever captureShapeSize returns is handed straight
+// back to applyShapeSize on every band change, so it must be a value the shape can re-read
+// indefinitely -- a copy, never a live reference into the shape.
 function captureShapeSize(shape) {
+  if (typeof shape.sizeSnapshot === 'function') return shape.sizeSnapshot();
   const base = {};
   for (const f of sizeFieldsOf(shape)) base[f] = shape[f];
   return base;
 }
 
 function applyShapeSize(shape, base, scale) {
+  if (typeof shape.applySizeScale === 'function') return shape.applySizeScale(base, scale);
   for (const f of Object.keys(base)) shape[f] = base[f] * scale;
 }

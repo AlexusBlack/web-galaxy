@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import * as QUARKS from 'three.quarks';
 import { RandomColorIndependent } from '../RandomColorIndependent.ts';
-import { UniformSphereEmitter } from '../UniformSphereEmitter.js';
+import { UniformSphereEmitter } from '../emitters/UniformSphereEmitter.js';
 import { Keyframes } from '../Keyframes.js';
 import { OpacityOverLife } from '../OpacityOverLife.js';
 

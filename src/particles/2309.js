@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import * as QUARKS from 'three.quarks';
 import { RandomColorIndependent } from '../RandomColorIndependent.ts';
-import { UniformSphereEmitter } from '../UniformSphereEmitter.js';
+// import { UniformSphereEmitter } from '../emitters/UniformSphereEmitter.js';
+import { EllipsoidEmitter } from '../emitters/EllipsoidEmitter.js';
 import { Keyframes } from '../Keyframes.js';
 import { OpacityOverLife } from '../OpacityOverLife.js';
 
@@ -17,8 +18,8 @@ export function Particles_2309() {
     looping: true, // FOR DEMO ONLY
 
     // Emission shape (where particles are emitted from)
-    shape: new UniformSphereEmitter({
-      radius: 1000,
+    shape: new EllipsoidEmitter({
+      radius: [2000, 15, 2000],
       thickness: 1,
     }),
     emissionOverTime: new QUARKS.ConstantValue(0),
