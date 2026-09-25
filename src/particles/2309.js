@@ -1,11 +1,28 @@
 import * as THREE from 'three';
 import * as QUARKS from 'three.quarks';
 import { RandomColorIndependent } from '../RandomColorIndependent.ts';
-// import { UniformSphereEmitter } from '../emitters/UniformSphereEmitter.js';
-import { EllipsoidEmitter } from '../emitters/EllipsoidEmitter.js';
+import { DiscEmitter } from '../emitters/DiscEmitter.js';
+import { MapFilteredEmitter } from '../emitters/MapFilteredEmitter.js';
+import { MapColor } from '../behaviors/MapColor.js';
+import { MapPin } from '../behaviors/MapPin.js';
+import { galaxyMaps } from '../effectmaps/galaxyRegistry.js';
 import { Keyframes } from '../Keyframes.js';
 import { OpacityOverLife } from '../OpacityOverLife.js';
 
+// Requires loadGalaxyMaps() to have resolved -- see src/main.js.
+//
+// THE RADIUS IS 1000, NOT 2000. The Swarm source reads `source -ellipse (2000, 2000, 15)`,
+// and those numbers are the FULL EXTENT, not radii: every map this system reads declares
+// `-rect (-1000,-1000,1000,1000)`, i.e. 2000 units across. Taking 2000 as a radius puts 56%
+// of all proposals outside the map entirely and drops rejection acceptance from 14.7% to
+// 3.97%. Corroborated by the artwork: 0x8E960553's lit content spans px 238..1747 of 2048,
+// reaching radius ~755 world units -- a comfortable fit inside 1000, impossible inside 2000.
+//
+// FIDELITY NOTE. 2309's own source declares only `mapEmit 0x8E960553 -aboveHeight 0.1`. The
+// colour and height layers below are borrowed from its sibling systems in the same galaxy
+// effect (particles-2186 uses `mapEmitColor 0x86601D55`; distribute-72 uses
+// `mapPin 0x6F3E772B`), so that this one system shows the whole map pipeline while those
+// siblings do not exist yet. Drop the two behaviors to get back to the literal source.
 export function Particles_2309() {
   const particleSystem = new QUARKS.ParticleSystem({
     uTileCount: 1,
@@ -18,9 +35,13 @@ export function Particles_2309() {
     looping: true, // FOR DEMO ONLY
 
     // Emission shape (where particles are emitted from)
-    shape: new EllipsoidEmitter({
-      radius: [2000, 15, 2000],
-      thickness: 1,
+    shape: new MapFilteredEmitter({
+      inner: new DiscEmitter({
+        radius: [1000, 7.5, 1000],
+        thickness: 1,
+      }),
+      map: galaxyMaps.get('0x8E960553'),
+      aboveHeight: 0.1,
     }),
     emissionOverTime: new QUARKS.ConstantValue(0),
 
@@ -58,6 +79,8 @@ export function Particles_2309() {
     // Behaviors controlling particle evolution over time
     behaviors: [
       new QUARKS.FrameOverLife(new QUARKS.PiecewiseBezier([[new QUARKS.Bezier(0, 7/3, 14/3, 7), 0]])), // tile index 0 from the 4x4 grid
+      new MapColor({ map: galaxyMaps.get('0x86601D55') }),
+      new MapPin({ map: galaxyMaps.get('0x6F3E772B') }),
       new OpacityOverLife(
         new Keyframes([0, 0.5, 2, 1, 0.8, 0.6, 0.4, 0.2, 0], { vary: 0.5 })
       ),
