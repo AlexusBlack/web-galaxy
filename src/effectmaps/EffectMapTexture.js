@@ -40,6 +40,18 @@ export class EffectMapTexture {
   // SG_galaxy_arms_color is 85% alpha<0.2 with real non-black colour underneath. load()
   // below goes through createImageBitmap with premultiplyAlpha:'none' for exactly this.
   static fromPixels(width, height, rgba, kind = 'image') {
+    // Validate here rather than letting a degenerate image propagate. Everything downstream
+    // -- mip count, coverage, max -- silently becomes NaN on a 0x0 input, and the throw then
+    // lands three files away from the actual mistake.
+    if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1) {
+      throw new Error(`EffectMapTexture.fromPixels: bad dimensions ${width}x${height}`);
+    }
+    if (rgba.length !== width * height * 4) {
+      throw new Error(
+        `EffectMapTexture.fromPixels: ${width}x${height} needs ${width * height * 4} RGBA ` +
+        `bytes, got ${rgba.length}`,
+      );
+    }
     const mono = kind === 'bitImage' || kind === 'monoImage';
     const channels = mono ? 1 : 4;
     const out = new Float32Array(width * height * channels);
@@ -70,13 +82,18 @@ export class EffectMapTexture {
       premultiplyAlpha: 'none',
       colorSpaceConversion: 'none',
     });
-    const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+    // Read the dimensions BEFORE close(). A closed ImageBitmap reports width and height 0,
+    // so using bitmap.width afterwards decodes every map as 0x0 -- which then surfaces far
+    // away as `levels[NaN] is undefined` inside EffectMap.bake().
+    const width = bitmap.width;
+    const height = bitmap.height;
+    const canvas = new OffscreenCanvas(width, height);
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     ctx.drawImage(bitmap, 0, 0);
     // colorSpace:'srgb' stops the browser converting on read; we do our own transfer above.
-    const img = ctx.getImageData(0, 0, bitmap.width, bitmap.height, { colorSpace: 'srgb' });
+    const img = ctx.getImageData(0, 0, width, height, { colorSpace: 'srgb' });
     bitmap.close();
-    return EffectMapTexture.fromPixels(bitmap.width, bitmap.height, img.data, kind);
+    return EffectMapTexture.fromPixels(width, height, img.data, kind);
   }
 
   // Build the pyramid up to and including `maxLevel` by successive 2x2 box reduction.
@@ -144,7 +161,9 @@ export class EffectMapTexture {
     let lit = 0, n = 0;
     for (let i = 0; i < a.length; i += c) { lit += a[i]; n++; }
     const p = lit / n;
-    if (p <= 0 || p >= 1) return 0;
+    // `!(p > 0 && p < 1)` rather than `p <= 0 || p >= 1`, so a NaN returns 0 instead of
+    // propagating out as a NaN mip level.
+    if (!(p > 0 && p < 1)) return 0;
     const needed = (1 - p) / (p * relError * relError); // texels per cell
     const level = Math.ceil(Math.log2(needed) / 2);
     return Math.max(0, Math.min(maxLevel, level));
