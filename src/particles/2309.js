@@ -23,37 +23,59 @@ import { OpacityOverLife } from '../OpacityOverLife.js';
 // effect (particles-2186 uses `mapEmitColor 0x86601D55`; distribute-72 uses
 // `mapPin 0x6F3E772B`), so that this one system shows the whole map pipeline while those
 // siblings do not exist yet. Drop the two behaviors to get back to the literal source.
+// `rate 3000 -loop 1` from the Swarm source, kept literal. The effective rate is this
+// times the map's acceptance -- see EMISSION below.
+const SWARM_RATE = 3000;
+
 export function Particles_2309() {
+  const shape = new MapFilteredEmitter({
+    inner: new DiscEmitter({
+      // HALF-HEIGHT 15, NOT 7.5. `source -ellipse (2000, 2000, 15)`: the first two are full
+      // extents (radius 1000 -- confirmed three ways now, see the header), but the third
+      // reads as a half-height. Taking it as a full extent too made the disc visibly ~2x
+      // too flat against the original. Nothing in the maps can supply the difference: the
+      // height map's variance is exactly 0 beyond radius ~700 (see MapPin below), so out in
+      // the arms the pin is a constant offset and the ellipse is the ONLY source of
+      // thickness. Spore evidently specifies a flat emitter's thickness as a half-extent.
+      radius: [1000, 15, 1000],
+      thickness: 1,
+    }),
+    map: galaxyMaps.get('0x8E960553'),
+    aboveHeight: 0.1,
+  });
+
   const particleSystem = new QUARKS.ParticleSystem({
     uTileCount: 1,
     vTileCount: 8,
     blendTiles: true,
     // Duration of the particle system in seconds
-    duration: 2,
+    duration: 1,
 
     // Whether the particle system should loop
     looping: true, // FOR DEMO ONLY
 
     // Emission shape (where particles are emitted from)
-    shape: new MapFilteredEmitter({
-      inner: new DiscEmitter({
-        radius: [1000, 7.5, 1000],
-        thickness: 1,
-      }),
-      map: galaxyMaps.get('0x8E960553'),
-      aboveHeight: 0.1,
-    }),
-    emissionOverTime: new QUARKS.ConstantValue(0),
+    shape,
 
-    emissionBursts: [
-      {
-        time: 0,
-        count: new QUARKS.ConstantValue(3000),
-        cycle: 1,
-        interval: 0.1, // Interval between cycles
-        probability: 1, // Probability of the burst occurring
-      },
-    ],
+    // EMISSION. Swarm's mapEmit is a one-shot cull -- a proposal that fails the map is
+    // simply never born -- so the authored rate is DIVIDED by the map. Our emitter
+    // resamples instead, which reproduces the same spatial distribution but would emit the
+    // full 3000/s, about 10x too many. Scaling the rate by the measured acceptance
+    // reproduces the cull exactly and costs nothing: 3000 * 0.0997 = 299/s.
+    //
+    // Written this way rather than as a literal 300 so the authored Swarm number survives
+    // in the source, and so -aboveHeight keeps its real effect on the count.
+    emissionOverTime: new QUARKS.ConstantValue(Math.round(SWARM_RATE * shape.acceptance)),
+
+    // emissionBursts: [
+    //   {
+    //     time: 0,
+    //     count: new QUARKS.ConstantValue(3000),
+    //     cycle: 1,
+    //     interval: 0.1, // Interval between cycles
+    //     probability: 1, // Probability of the burst occurring
+    //   },
+    // ],
 
     // Initial particle properties
     startLife: new QUARKS.IntervalValue(1, 3),
@@ -80,6 +102,9 @@ export function Particles_2309() {
     behaviors: [
       new QUARKS.FrameOverLife(new QUARKS.PiecewiseBezier([[new QUARKS.Bezier(0, 7/3, 14/3, 7), 0]])), // tile index 0 from the 4x4 grid
       new MapColor({ map: galaxyMaps.get('0x86601D55') }),
+      // Borrowed, and it does less than it looks: SG_galaxy_heights is flat to the byte
+      // beyond world radius ~700 and its variance only becomes significant inside ~300, so
+      // over most of the arms this is a constant -1.76 unit shift, not added thickness.
       new MapPin({ map: galaxyMaps.get('0x6F3E772B') }),
       new OpacityOverLife(
         new Keyframes([0, 0.5, 2, 1, 0.8, 0.6, 0.4, 0.2, 0], { vary: 0.5 })

@@ -6,7 +6,7 @@ export function Effect_4227() {
     name: 'effect-4227',
     lodDistances: [69, 70, 300, 500, 600, 3000, 6000, 8500],
     particles: [
-      { system: Particles_2309(), lodRange: [3, 8], alphaScale: [0, 1, 1, 1, 1, 1] },
+      { system: Particles_2309(), lodRange: [3, 8], alphaScale: [0, 1, 1, 1, 1, 1], sizeScale: [2, 3.2, 4.4000001, 5.5999999, 6.8000002, 8] },
     ],
   });
 }

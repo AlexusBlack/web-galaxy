@@ -79,6 +79,36 @@ export class MapFilteredEmitter {
     this._attempts = 0;
     this._exhausted = 0;
     this._warned = false;
+    this._acceptance = null;
+  }
+
+  // The fraction of the inner emitter's proposals this map keeps -- equivalently, the mean
+  // of the gated, max-normalised field over the inner shape's support.
+  //
+  // WHY A CONSUMER NEEDS THIS. Swarm's mapEmit is a one-shot CULL: the emitter proposes at
+  // its authored rate and a failing proposal simply never becomes a particle, so the map
+  // divides the effective rate. We resample instead, which gives the identical spatial
+  // distribution (a uniform proposal survives with probability proportional to the map
+  // either way) but leaves the rate untouched. The two differ ONLY in count, by exactly
+  // this factor -- so an authored Swarm rate must be multiplied by it to match. For 2309
+  // that is 3000 * 0.0997 = 299, against a hand-tuned 300.
+  //
+  // Measured rather than integrated because only `inner` knows its own support, and it may
+  // be any shape. 50k trials puts the relative standard error at ~1.3%, i.e. +/-4 particles
+  // on a 300-particle rate -- far below anything visible, and it costs a few ms once.
+  get acceptance() {
+    if (this._acceptance === null) this._acceptance = this._measureAcceptance(50000);
+    return this._acceptance;
+  }
+
+  _measureAcceptance(trials) {
+    const probe = { position: new THREE.Vector3(), velocity: new THREE.Vector3(), startSpeed: 0 };
+    let kept = 0;
+    for (let i = 0; i < trials; i++) {
+      this.inner.initialize(probe);
+      if (this._accept(probe.position)) kept++;
+    }
+    return kept / trials;
   }
 
   initialize(particle, emissionState) {

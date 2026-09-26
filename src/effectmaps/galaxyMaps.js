@@ -26,16 +26,16 @@ const RECT_900 = [-900, -900, 900, 900];
 
 export const GALAXY_MAPS = [
   { id: '0x8E960553', rect: RECT_1000, kind: 'bitImage', src: '0x8E960553.png' },
-  { id: '0x9A76F5E7', rect: RECT_1000, kind: 'bitImage', src: '0x9A76F5E7.png' },
-  { id: '0x1A4D48A7', rect: RECT_1000, kind: 'bitImage', src: '0x1A4D48A7.png' },
-  { id: '0xB6412D00', rect: RECT_1000, kind: 'bitImage', src: '0xDE12103B.png' },
-  { id: '0x625BB6AE', rect: RECT_1000, kind: 'image', src: '0x625BB6AE.png' },
+  // { id: '0x9A76F5E7', rect: RECT_1000, kind: 'bitImage', src: '0x9A76F5E7.png' },
+  // { id: '0x1A4D48A7', rect: RECT_1000, kind: 'bitImage', src: '0x1A4D48A7.png' },
+  // { id: '0xB6412D00', rect: RECT_1000, kind: 'bitImage', src: '0xDE12103B.png' },
+  // { id: '0x625BB6AE', rect: RECT_1000, kind: 'image', src: '0x625BB6AE.png' },
   { id: '0x86601D55', rect: RECT_1000, kind: 'image', src: 'SG_galaxy_arms_color.png' },
   { id: '0xEF82F8CE', rect: RECT_900, kind: 'monoImage', src: 'SG_galaxy_heights.png' },
 
-  { id: '0xFF33EE2A', rect: RECT_1000, kind: 'op', op: 'multiply', a: '0x9A76F5E7', b: '0x8E960553' },
-  { id: '0x0A256562', rect: RECT_1000, kind: 'op', op: 'multiply', a: '0x1A4D48A7', b: '0x8E960553' },
+  // { id: '0xFF33EE2A', rect: RECT_1000, kind: 'op', op: 'multiply', a: '0x9A76F5E7', b: '0x8E960553' },
+  // { id: '0x0A256562', rect: RECT_1000, kind: 'op', op: 'multiply', a: '0x1A4D48A7', b: '0x8E960553' },
   { id: '0x66BF605C', rect: RECT_900, kind: 'op', op: 'add', a: '0xEF82F8CE', b: [-0.5, -0.5, -0.5, -0.5] },
   { id: '0x6F3E772B', rect: RECT_900, kind: 'op', op: 'multiply', a: '0x66BF605C', b: [20, 20, 20, 20] },
-  { id: '0x082B9950', rect: RECT_900, kind: 'op', op: 'multiply', a: '0x66BF605C', b: [10, 10, 10, 10] },
+  // { id: '0x082B9950', rect: RECT_900, kind: 'op', op: 'multiply', a: '0x66BF605C', b: [10, 10, 10, 10] },
 ];
